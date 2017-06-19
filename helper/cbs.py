@@ -93,6 +93,7 @@ class CommonHelper(TestlioAutomationTest):
         lookup['SAMSUNG-SM-G900A'] = 'samsung SAMSUNG-SM-G900A'
         lookup['SAMSUNG-SM-G930A'] = 'samsung SAMSUNG-SM-G930A'
         lookup['SM-T330NU'] = 'samsung SM-T330NU'
+        lookup['SAMSUNG-SM-N910A'] = 'samsung SAMSUNG-SM-N910A'
 
         adb_device_name = subprocess.check_output(['adb', 'shell', 'getprop ro.product.model']).strip()
         return lookup[adb_device_name]
@@ -210,6 +211,10 @@ class CommonHelper(TestlioAutomationTest):
         self._go_to('Live TV')
         self.click_allow_popup()
         self.driver.implicitly_wait(120)
+
+    def goto_movies(self):
+        self.open_drawer()
+        self._go_to('Movies')
 
     def goto_schedule(self):
         self.open_drawer()
@@ -599,7 +604,8 @@ class CommonHelper(TestlioAutomationTest):
         sleep(5)
         for i in range(2):
             try:
-                self.click_safe(xpath="//*[@text='Allow']")
+                self.get_element(timeout=10, name='Allow')
+                self.click(xpath=("//*[@text='Allow']"))
                 break
             except:
                 pass
@@ -911,14 +917,14 @@ class CommonHelper(TestlioAutomationTest):
             self.exists(name='Submit', driver=my_layout)
         """
 
-        # if kwargs.has_key('timeout'):
-        #     self.driver.implicitly_wait(kwargs['timeout'])
-        # else:
-        #     self.driver.implicitly_wait(20)
-        # if kwargs.has_key('driver'):
-        #     d = kwargs['driver']
-        # else:
-        #     d = self.driver
+        if kwargs.has_key('timeout'):
+            self.driver.implicitly_wait(kwargs['timeout'])
+        else:
+            self.driver.implicitly_wait(20)
+        if kwargs.has_key('driver'):
+            d = kwargs['driver']
+        else:
+            d = self.driver
 
         if kwargs.has_key('element'):
             try:
@@ -927,11 +933,25 @@ class CommonHelper(TestlioAutomationTest):
                 return False
         else:
             try:
-                return self.get_element(**kwargs)
+                if kwargs.has_key('name'):
+                    try:
+                        e = d.find_element_by_xpath("//*[@text='{0}' or @content-desc='{1}']".format(kwargs['name'], kwargs['name']))
+                    except:
+                        e = d.find_element_by_xpath('//*[contains(@text,"%s")]' % kwargs['name'])
+                elif kwargs.has_key('class_name'):
+                    e = d.find_element_by_class_name(kwargs['class_name'])
+                elif kwargs.has_key('id'):
+                    e = d.find_element_by_id(kwargs['id'])
+                elif kwargs.has_key('xpath'):
+                    e = d.find_element_by_xpath(kwargs['xpath'])
+                else:
+                    raise RuntimeError("exists() called with incorrect param. kwargs = %s" % kwargs)
+
+                return e
             except NoSuchElementException:
                 return False
-            # finally:
-            #     self.driver.implicitly_wait(self.default_implicit_wait)
+            finally:
+                self.driver.implicitly_wait(self.default_implicit_wait)
 
     def not_exists(self, **kwargs):
         """
@@ -2389,23 +2409,7 @@ class CommonHelper(TestlioAutomationTest):
         Tap in the seek bar to jump over.  jump_time is in seconds.
         Find where to tap by dividing jump_time by total_time as found in the screen element
         """
-        root = self.get_page_source_xml()
-
-        try:
-            self._find_element_using_xml(root, 'resource-id', self.com_cbs_app + ':id/tvTotalTime')
-        except:
-            if self.IS_AMAZON:
-                self.click_safe(element=self.get_element(name='ok'))
-                self.click_safe(element=self.get_element(name='OK'))
-                self.click_safe(element=self.get_element(name='Ok'))
-            else:
-                self.click_safe(element=self.get_element(name='Got It'))
-                self.click_safe(element=self.get_element(name='Got it'))
-                self.click_safe(element=self.get_element(name='GOT IT'))
-            self._short_swipe_up(duration=1000)
-
-        self._short_swipe_up(duration=1000)
-        self.tap(0.5, 0.5, "Tap in the center")
+        self.click_safe(element=self.get_element(name='OK'))
         root = self.get_page_source_xml()
 
         total_time_elem = self._find_element_using_xml(root, 'resource-id', self.com_cbs_app + ':id/tvTotalTime')
